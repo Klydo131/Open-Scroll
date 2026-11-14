@@ -448,9 +448,9 @@ input:focus-visible + .box { outline: 3px solid var(--focus); outline-offset: 2p
   .status { order: 3; flex-basis: 100%; }
   .segmented.big { flex: 1; }
   .segmented.big button { flex: 1; justify-content: center; padding: 0 10px; }
-  .line { grid-template-columns: 50px 1fr auto; align-items: start; padding: 6px 0; column-gap: 4px; }
+  .line { grid-template-columns: 44px 1fr auto; align-items: start; padding: 6px 0; column-gap: 4px; }
   .line-time { padding-top: 11px; font-size: .74rem; }
-  .line-main { grid-template-columns: 1fr 1fr; gap: 0 4px; }
+  .line-main { grid-template-columns: 1.25fr 1fr; gap: 0 2px; }
   .line-main input { min-height: 36px; }
   .line-part { grid-column: 1 / -1; }
   .wide-only { display: none; }
@@ -529,3 +529,18 @@ input:focus-visible + .box { outline: 3px solid var(--focus); outline-offset: 2p
 .file-grid > * { width: 100%; justify-content: center; }
 .share-actions { grid-template-columns: 1fr 1fr; }
 @media (max-width: 760px) { .file-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* ---------- Logo ---------- */
+
+.brand img { border-radius: 7px; }
+.welcome-logo { border-radius: 14px; box-shadow: var(--shadow); }
+
+/* Typed values keep full contrast even inside muted labels. */
+.counts input, .line-extra input, .own-list input, .topic-set input { color: var(--ink); }
+
+@media (max-width: 760px) {
+  .file-grid { grid-template-columns: 1fr 1fr; }
+  .tabs { gap: 2px; }
+  .tabs button { flex: 1; min-width: 0; padding: 0 8px; gap: 4px; font-size: .94rem; }
+  .tabs button svg { display: none; }
+}

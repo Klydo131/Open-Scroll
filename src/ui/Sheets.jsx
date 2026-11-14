@@ -5,6 +5,7 @@ import {
   newSeries, newService, nextWeekday, planWeeks,
 } from '../model.mjs';
 import { Field, Icon } from './bits.jsx';
+import logo from '../assets/logo.svg';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -40,6 +41,7 @@ export function Welcome({ settings, onSave }) {
   const [mode, setMode] = useState(settings.mode);
   return (
     <div className="stack">
+      <img className="welcome-logo" src={logo} alt="" width="56" height="56" />
       <p>Open Scroll helps you plan the order of service and a series of meetings, then print or share them. Three quick choices, all of which you can change later in Settings.</p>
       <h3>Which words should it use?</h3>
       <TraditionPick value={tradition} onChange={setTradition} />

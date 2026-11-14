@@ -9,6 +9,7 @@ import { ServiceEditor } from './ui/ServiceEditor.jsx';
 import { SeriesEditor } from './ui/SeriesEditor.jsx';
 import { Preview } from './ui/Preview.jsx';
 import { Settings } from './ui/Settings.jsx';
+import logo from './assets/logo.svg';
 import { Help, NewSeries, NewService, Welcome } from './ui/Sheets.jsx';
 
 function loadStore() {
@@ -83,7 +84,7 @@ export function App() {
       <a className="skip" href="#main">Skip to content</a>
       <header className="topbar">
         {route.view === 'home' ? (
-          <span className="brand"><Icon name="book" size={22} /> Open Scroll</span>
+          <span className="brand"><img src={logo} alt="" width="28" height="28" /> Open Scroll</span>
         ) : (
           <button type="button" className="back" onClick={home}><Icon name="back" size={18} /> All programs</button>
         )}

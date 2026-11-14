@@ -1,10 +1,37 @@
-# Open Scroll
+<p align="center">
+  <img src="docs/images/logo.svg" width="112" height="112" alt="Open Scroll logo: an open scroll with gold rolls on navy">
+</p>
+
+<h1 align="center">Open Scroll</h1>
+
+<p align="center">
+  Plan the day of worship and evangelistic meetings.<br>
+  Private, free and open source.
+</p>
+
+<p align="center">
+  <img src="docs/images/home.png" alt="Open Scroll's home screen: programs coming up, each with a ring counting the parts that still need someone" width="860">
+</p>
 
 Open Scroll helps a church plan its day of worship and its evangelistic meetings, make them its own, and hand everyone a clear program. It runs in the browser, needs no account, and keeps every program on the device it was made on.
 
 It speaks the words your church uses:
 - Choose **Seventh-day Adventist** and it plans the Sabbath: Sabbath School, the Divine Service and an evangelistic series.
 - Choose **another church tradition** and the same tools plan Sunday School, the worship service and an outreach series.
+
+## A look around
+
+All pictures are the real app with made-up sample data.
+
+| Plan the order of service | Preview and share |
+| :---: | :---: |
+| <img src="docs/images/plan.png" alt="Planning a Sabbath School: each part with its hymn or passage and who leads it, with start times in Advanced"> | <img src="docs/images/preview.png" alt="The congregation's copy, with a Save a file area for PDF, Word, Excel, text, Markdown, picture and calendar"> |
+| **Plan a series of meetings** | **Make it your own** |
+| <img src="docs/images/series.png" alt="An evangelistic series: totals so far, and one night open with its topic, speaker, scripture and counts"> | <img src="docs/images/settings.png" alt="Settings: how much to show, look and paper, and your own templates"> |
+
+<p align="center">
+  <img src="docs/images/phones.png" alt="Open Scroll on a phone: home, planning in Simple, preview and sharing, and a series in dark mode" width="860">
+</p>
 
 ## Simple or Advanced
 
@@ -66,6 +93,12 @@ Choose Letter or A4 paper in Settings. The PDF uses the standard Western Europea
 | Evangelistic night, with a Bible prophecy or a health-and-hope topic list | Outreach night, with a questions-of-life or revival-week topic list |
 
 Every template is a starting point drawn from published practice. [docs/RESEARCH.md](./docs/RESEARCH.md) explains each one and lists its sources. No hymn titles or numbers are included: hymnals belong to their publishers, and every church sings its own.
+
+The platform copy adds start times, leaders and private notes for those leading:
+
+<p align="center">
+  <img src="docs/images/preview-platform.png" alt="The platform copy of a Sabbath program, with start times and the leader for each part" width="760">
+</p>
 
 ## Your privacy
 

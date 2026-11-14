@@ -44,9 +44,9 @@ export function LineList({ lines, time, onChange, label = 'Order of service', ad
                 value={line.part} maxLength={LIMITS.text} autoFocus={fresh === line.id}
                 onChange={e => set(line.id, { part: e.target.value })} />
               <input className="line-detail" aria-label={`${line.part || 'Part'}: hymn, passage or title`}
-                placeholder={line.hint || 'Hymn, passage or title'} value={line.detail} maxLength={LIMITS.text}
+                placeholder={line.hint || 'Hymn, verse'} value={line.detail} maxLength={LIMITS.text}
                 onChange={e => set(line.id, { detail: e.target.value })} />
-              <input className="line-who" aria-label={`${line.part || 'Part'}: who leads it`} placeholder="Who leads"
+              <input className="line-who" aria-label={`${line.part || 'Part'}: who leads it`} placeholder="Leader"
                 value={line.who} maxLength={LIMITS.text} onChange={e => set(line.id, { who: e.target.value })} />
             </div>
             <button type="button" className="icon-btn line-more" aria-expanded={open === line.id}

@@ -2,6 +2,19 @@
 
 All notable changes to Open Scroll. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.4.1]
+
+### Added
+
+- **A logo**: an open scroll in the app's own navy, gold and paper. It is the tab icon and home-screen icon, sits in the top bar and the welcome sheet, and heads the README. A social-preview image is in `docs/images`.
+- **Sample pictures** in the README: the real app, with made-up sample data, on desktop, phone and in dark mode.
+
+### Fixed
+
+- Numbers typed into a night's counts, and values in the template and topic boxes, were faint grey because they inherited the label colour. They now use the normal text colour.
+- On a phone, the file buttons no longer cut off "Markdown" and "Calendar", the series tabs fit on one row, and the hymn and leader hints are shorter so they are not clipped.
+- The hint for a part's detail is now "Hymn, verse", and the leader box says "Leader".
+
 ## [0.4.0]
 
 ### Added

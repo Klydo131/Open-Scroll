@@ -50,6 +50,7 @@ Logic belongs in `model.mjs` or `output.mjs`, where it can be tested without a b
 
 - Keep each pull request to one change, with tests for any new rule in the model.
 - `pnpm test` and `pnpm build` must pass; CI runs both.
+- Pictures in `docs/images` are taken from the real app with made-up data: a fictional church and roles such as "Song leader", never a real person, church or address. Keep it that way when you retake them.
 - Describe what a church will notice, and include before and after screenshots for any visible change, at phone and desktop width.
 - New dependencies need a reason. Open Scroll ships React and the Astryx design system and very little else.
 - Contributions are accepted under the project's [MIT License](./LICENSE).
