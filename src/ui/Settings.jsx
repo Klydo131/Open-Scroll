@@ -4,6 +4,7 @@ import { LIMITS, OWN_WORDS, TRADITIONS, dayKey, tidyStore } from '../model.mjs';
 import { version } from '../../package.json';
 import { Field, Icon, IconButton } from './bits.jsx';
 import { ModePick, TraditionPick } from './Sheets.jsx';
+import { PAPER } from '../export.mjs';
 import { ACCENTS, STYLES, saveFile } from './Preview.jsx';
 
 const WORD_LABELS = {
@@ -55,7 +56,7 @@ export function Settings({ store, setStore, setSettings, notify }) {
         <ModePick value={settings.mode} onChange={mode => setSettings({ mode })} />
       </Group>
 
-      <Group id="s-look" title="Look for new programs" intro="Each program can still change its own look in Preview.">
+      <Group id="s-look" title="Look and paper" intro="The look is for new programs; each program can still change its own in Preview. Paper size is used for PDF and Word files.">
         <div className="segmented" role="radiogroup" aria-label="Look">
           {STYLES.map(s => (
             <button key={s.key} type="button" role="radio" aria-checked={look.style === s.key} className={look.style === s.key ? 'on' : ''}
@@ -66,6 +67,12 @@ export function Settings({ store, setStore, setSettings, notify }) {
           {ACCENTS.map(c => (
             <button key={c.value} type="button" role="radio" aria-checked={look.accent === c.value} aria-label={c.name} title={c.name}
               className={look.accent === c.value ? 'on' : ''} style={{ '--sw': c.value }} onClick={() => setSettings({ look: { ...settings.look, accent: c.value } })} />
+          ))}
+        </div>
+        <div className="segmented" role="radiogroup" aria-label="Paper size">
+          {Object.entries(PAPER).map(([key, p]) => (
+            <button key={key} type="button" role="radio" aria-checked={settings.paper === key} className={settings.paper === key ? 'on' : ''}
+              onClick={() => setSettings({ paper: key })}>{p.label}</button>
           ))}
         </div>
       </Group>

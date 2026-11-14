@@ -16,7 +16,8 @@ You choose when Open Scroll first opens, and can change it any time in **Setting
 | Each part with its hymn, passage or title, and who leads it | ✓ | ✓ |
 | A ring counting the parts that still need someone | ✓ | ✓ |
 | Evangelistic series with dates, topics, team and preparation list | ✓ | ✓ |
-| Print, save a picture, copy text, add to calendar | ✓ | ✓ |
+| Print, copy text, save a picture, add to calendar | ✓ | ✓ |
+| Save as PDF, Word, Excel, text or Markdown | ✓ | ✓ |
 | Copy for next week, make a copy, undo | ✓ | ✓ |
 | Minutes, start times and when each part of the day ends | | ✓ |
 | Private notes and a platform copy for those leading | | ✓ |
@@ -36,6 +37,22 @@ You choose when Open Scroll first opens, and can change it any time in **Setting
   - Bringing a backup in only adds what is missing, and on a new device it brings your settings too.
   - Erasing everything always asks first.
 
+## Take it with you
+
+From **Preview & share**, save the program you are looking at as a file. Every file is made on your device, never uploaded, and follows the copy you chose: a congregation copy never contains private notes, and the platform copy adds start times, leaders and notes.
+
+| File | Good for |
+| --- | --- |
+| **PDF** | Sending or printing. Real, selectable text on Letter or A4. |
+| **Word** (.docx) | Editing further, or a church office that works in Word. Opens in Word, LibreOffice and Google Docs. |
+| **Excel** (.xlsx) | Planning in a spreadsheet: one row per part, with a Nights sheet for a series, plus Team and Preparation sheets on the platform copy. Counts for each night are added in Advanced. |
+| **Text** (.txt) | Pasting into a message, an email or any app. |
+| **Markdown** (.md) | Obsidian and other note apps. It has properties at the top (title, church, date, type), headings, lists and callouts, and typed text can never turn into links or formatting. |
+| **Picture** (.png) | A group chat or a church page. |
+| **Calendar** (.ics) | Putting the dates in a phone or computer calendar. |
+
+Choose Letter or A4 paper in Settings. The PDF uses the standard Western European fonts that every PDF reader has, so text in other alphabets (such as Chinese or Arabic) shows as "?" in the PDF, and Open Scroll tells you when that happens. Word, Excel, Text and Markdown keep every character, and **Print, then Save as PDF** in your browser keeps them in a PDF.
+
 ## Templates included
 
 | Seventh-day Adventist | Another church tradition |
@@ -54,7 +71,7 @@ Every template is a starting point drawn from published practice. [docs/RESEARCH
 
 - Open Scroll has no server and makes no network requests; its Content Security Policy forbids them.
 - Programs, templates and settings are stored only in this browser.
-- Pictures, calendar files and backups are made on the device.
+- PDF, Word, Excel, text, Markdown, picture, calendar and backup files are all made on the device.
 - A series keeps nightly numbers only, never the names of guests. Those belong in your church's own secure records.
 - Clearing the browser's site data removes everything, so download a backup now and then.
 
@@ -75,7 +92,7 @@ Open the address Vite prints. Any static host can serve `dist/` over HTTPS; set 
 
 Ideas, bug reports and pull requests are welcome. Please read [CONTRIBUTING.md](./CONTRIBUTING.md) first; it explains the few rules every change keeps. Report security problems privately as described in [SECURITY.md](./SECURITY.md). Everyone taking part follows the [Code of Conduct](./CODE_OF_CONDUCT.md). Changes from one version to the next are listed in [CHANGELOG.md](./CHANGELOG.md).
 
-Open Scroll is built with React and the [Astryx](https://astryx.atmeta.com/) Neutral theme. Its planning features were informed by the public documentation of [Open Sentry Beacon](https://github.com/Klydo131/Open-Sentry-Beacon).
+Open Scroll is built with React, the [Astryx](https://astryx.atmeta.com/) Neutral theme and [pdf-lib](https://pdf-lib.js.org/) (MIT, loaded only when you save a PDF). Word and Excel files are written directly, with no library. Its planning features were informed by the public documentation of [Open Sentry Beacon](https://github.com/Klydo131/Open-Sentry-Beacon).
 
 ## License
 

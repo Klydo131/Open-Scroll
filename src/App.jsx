@@ -118,7 +118,7 @@ export function App() {
             {route.view === 'edit' && program.kind === 'series' && (
               <SeriesEditor program={program} words={w} advanced={advanced} onChange={put} onSaveTopics={saveTopics} />
             )}
-            {route.view === 'preview' && <Preview program={program} words={w} advanced={advanced} onChange={put} notify={notify} />}
+            {route.view === 'preview' && <Preview program={program} words={w} advanced={advanced} paper={store.settings.paper} onChange={put} notify={notify} />}
           </>
         )}
       </main>
@@ -169,7 +169,7 @@ function ProgramBar({ program, view, words, onView, onNextWeek, onDuplicate, onR
           <Icon name="list" size={16} /> Plan
         </button>
         <button type="button" role="tab" aria-selected={view === 'preview'} className={view === 'preview' ? 'on' : ''} onClick={() => onView('preview')}>
-          <Icon name="eye" size={16} /> Preview<span className="wide-only">&nbsp;&amp; share</span>
+          <Icon name="eye" size={16} /> Preview<span className="wide-only">&amp; share</span>
         </button>
       </div>
       <div className="menu-wrap" ref={wrap}>

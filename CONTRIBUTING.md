@@ -17,7 +17,8 @@ Thank you for helping churches plan their worship. Open Scroll is small on purpo
 5. **No people in templates or reports.** Saved templates keep the order, never names. Nightly counts are numbers only.
 6. **No copyrighted hymn texts, titles or numbers** are shipped in templates.
 7. **Accessible by default.** Every control has a visible label or an `aria-label`, works with the keyboard, and has a touch target of at least 40 pixels. Motion uses only opacity and transform and stops under `prefers-reduced-motion`.
-8. **Plain words.** Write interface text for someone who is not technical. Prefer "Remove" to "Delete record", "Who leads" to "Assignee".
+8. **One copy, every format.** Everything a printed or saved copy contains comes from `programDoc()` in `src/output.mjs`, which applies the congregation and platform rules once. New formats read from it; they never reach into a program themselves, so a private note can never reach a file by accident.
+9. **Plain words.** Write interface text for someone who is not technical. Prefer "Remove" to "Delete record", "Who leads" to "Assignee".
 
 ## Working on the code
 
@@ -35,7 +36,9 @@ The production Content Security Policy blocks the development server's live relo
 | Path | What lives there |
 | --- | --- |
 | `src/model.mjs` | Programs, templates, words for each tradition, timing, readiness, and the tidying of saved data. Pure functions. |
-| `src/output.mjs` | The text copy and the calendar file. Pure functions. |
+| `src/output.mjs` | What a copy contains (`programDoc`), the text copy and the calendar file. Pure functions. |
+| `src/export.mjs` | Markdown, Word and Excel files, and the zip they are packed in. Pure functions, no library. |
+| `src/pdf.js` | The PDF, made with `pdf-lib` loaded on demand. |
 | `src/picture.js` | The shareable picture, drawn on a canvas. |
 | `src/App.jsx`, `src/ui/` | Screens. They call the model; they hold no rules of their own. |
 | `tests/` | `node --test` suites for the model and outputs. |

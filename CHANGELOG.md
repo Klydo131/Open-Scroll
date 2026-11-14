@@ -2,6 +2,23 @@
 
 All notable changes to Open Scroll. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.4.0]
+
+### Added
+
+- **Save a file.** From Preview, save the program you are looking at as **PDF**, **Word** (.docx), **Excel** (.xlsx), **text** or **Markdown** (.md, with properties and callouts for Obsidian and other note apps), as well as the existing picture and calendar.
+  - Every file is made on the device and follows the chosen copy and night.
+  - Excel has one row per part, a Nights sheet for a series, Team and Preparation sheets on the platform copy, and nightly counts in Advanced.
+  - Typed text cannot become a spreadsheet formula, Markdown formatting, a link or XML.
+- **Paper size** (Letter or A4) in Settings, used for PDF and Word.
+- The platform copy of a series now includes the team and the preparation list in text and Markdown too.
+- Night names in text and files follow the church's own word for "Night".
+
+### Changed
+
+- Print and Copy text sit together; every file type has its own button under "Save a file".
+- Adds `pdf-lib` (MIT) as a dependency, loaded only when a PDF is saved.
+
 ## [0.3.0]
 
 ### Added

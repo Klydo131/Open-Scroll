@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { clockAt, dateLabel, timed } from '../model.mjs';
 import { calendar, copyOptions, fileName, programText } from '../output.mjs';
+import { FILE_TYPES, docxFile, markdownText, xlsxFile } from '../export.mjs';
 import { programPicture } from '../picture.js';
 import { Icon } from './bits.jsx';
 
@@ -42,7 +43,7 @@ function Lines({ lines, time, opt }) {
 }
 
 /** The program as it will be handed out, and every way to send it. */
-export function Preview({ program, words, advanced, onChange, notify }) {
+export function Preview({ program, words, advanced, paper = 'letter', onChange, notify }) {
   const [chosenCopy, setCopy] = useState('congregation');
   // The platform copy belongs to Advanced; Simple always shows the congregation's.
   const copy = advanced ? chosenCopy : 'congregation';
@@ -53,7 +54,7 @@ export function Preview({ program, words, advanced, onChange, notify }) {
   const setLook = fields => onChange({ ...program, look: { ...look, ...fields } });
   const series = program.kind === 'series';
   const nights = series && nightId ? program.nights.filter(n => n.id === nightId) : series ? program.nights : [];
-  const textOptions = { copy, showLeaders, nightId: nightId || null };
+  const textOptions = { copy, showLeaders, nightId: nightId || null, night: words.night };
 
   const copyText = async () => {
     try {
@@ -75,6 +76,33 @@ export function Preview({ program, words, advanced, onChange, notify }) {
   const ics = () => {
     saveFile(new Blob([calendar(program)], { type: 'text/calendar' }), fileName(program, 'ics'));
     notify('Calendar file saved. Open it to add the dates.');
+  };
+
+  // Each file is made on this device from the same copy you are looking at.
+  const makers = {
+    txt: async () => ({ data: programText(program, textOptions) }),
+    md: async () => ({ data: markdownText(program, textOptions) }),
+    docx: async () => ({ data: docxFile(program, textOptions, paper) }),
+    xlsx: async () => ({ data: xlsxFile(program, textOptions, advanced && copy === 'platform') }),
+    pdf: async () => {
+      const { programPdf } = await import('../pdf.js');
+      const { bytes, replaced } = await programPdf(program, textOptions, paper);
+      return { data: bytes, note: replaced ? ` ${replaced} character${replaced === 1 ? '' : 's'} in other alphabets could not be shown; Print, then Save as PDF, keeps them.` : '' };
+    },
+  };
+  const [busy, setBusy] = useState('');
+  const download = async kind => {
+    const type = FILE_TYPES[kind];
+    setBusy(kind);
+    try {
+      const { data, note = '' } = await makers[kind]();
+      saveFile(new Blob([data], { type: type.mime }), fileName(program, type.ending));
+      notify(`${type.label} file saved to your downloads.${note}`);
+    } catch {
+      notify(`The ${type.label} file could not be made in this browser.`);
+    } finally {
+      setBusy('');
+    }
   };
 
   return (
@@ -120,9 +148,20 @@ export function Preview({ program, words, advanced, onChange, notify }) {
         </div>
         <div className="share-actions">
           <Button label="Print" variant="primary" icon={<Icon name="print" size={16} />} onClick={() => window.print()} />
-          <Button label="Save picture" icon={<Icon name="image" size={16} />} onClick={picture} />
           <Button label="Copy text" icon={<Icon name="chat" size={16} />} onClick={copyText} />
-          <Button label="Add to calendar" icon={<Icon name="calendar" size={16} />} onClick={ics} />
+        </div>
+        <div className="control">
+          <span className="control-label">Save a file</span>
+          <div className="file-grid">
+            <Button label="PDF" icon={<Icon name="file" size={16} />} isDisabled={busy === 'pdf'} onClick={() => download('pdf')} />
+            <Button label="Word" icon={<Icon name="file" size={16} />} onClick={() => download('docx')} />
+            <Button label="Excel" icon={<Icon name="table" size={16} />} onClick={() => download('xlsx')} />
+            <Button label="Text" icon={<Icon name="file" size={16} />} onClick={() => download('txt')} />
+            <Button label="Markdown" icon={<Icon name="file" size={16} />} onClick={() => download('md')} />
+            <Button label="Picture" icon={<Icon name="image" size={16} />} onClick={picture} />
+            <Button label="Calendar" icon={<Icon name="calendar" size={16} />} onClick={ics} />
+          </div>
+          <small className="muted">Markdown opens in Obsidian and other note apps. Excel puts each part on its own row. Paper size is in Settings.</small>
         </div>
       </aside>
 

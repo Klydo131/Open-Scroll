@@ -7,6 +7,8 @@ import {
   tidyStore, timed, totalMinutes, words, writeStore,
 } from '../src/model.mjs';
 import { calendar, copyOptions, fileName, icsText, programText } from '../src/output.mjs';
+import { columnName, crc32, docxFile, markdownText, mdEscape, sheetNames, workbookSheets, xlsxFile, xml, zip } from '../src/export.mjs';
+import { programPdf } from '../src/pdf.js';
 
 const ADVENTIST = { tradition: 'adventist', church: 'Riverside Church' };
 const GENERAL = { tradition: 'general', church: '' };
@@ -270,4 +272,136 @@ test('the researched templates are present for each tradition', () => {
   assert.ok(keys('general').includes('communion'));
   const communion = SECTION_TEMPLATES.adventist.find(t => t.key === 'communion').parts.map(p => p.part);
   assert.ok(communion.indexOf('Ordinance of humility (foot washing)') < communion.indexOf('The bread'), 'foot washing comes before the bread');
+});
+
+// ---------------------------------------------------------------------------
+// Files: Markdown, Word, Excel, PDF
+// ---------------------------------------------------------------------------
+
+function readZip(bytes) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let end = bytes.length - 22;
+  assert.equal(view.getUint32(end, true), 0x06054b50, 'end-of-archive record');
+  const count = view.getUint16(end + 10, true);
+  let at = view.getUint32(end + 16, true);
+  const files = {};
+  for (let i = 0; i < count; i += 1) {
+    assert.equal(view.getUint32(at, true), 0x02014b50);
+    const crc = view.getUint32(at + 16, true);
+    const size = view.getUint32(at + 24, true);
+    const nameLen = view.getUint16(at + 28, true);
+    const local = view.getUint32(at + 42, true);
+    const name = new TextDecoder().decode(bytes.subarray(at + 46, at + 46 + nameLen));
+    const start = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
+    const data = bytes.subarray(start, start + size);
+    assert.equal(crc32(data), crc, `${name} checksum`);
+    files[name] = new TextDecoder().decode(data);
+    at += 46 + nameLen;
+  }
+  return files;
+}
+
+const awkward = () => {
+  const p = newService(ADVENTIST, ['vespers'], NOW);
+  p.title = 'Peace & <Hope> "now"';
+  p.church = 'Riverside [[Church]]';
+  p.sections[0].lines[0] = { ...p.sections[0].lines[0], detail: '=1+1 | #5 *bold*', who: 'Ana', note: 'Mic 2', minutes: 4 };
+  p.announcements = 'Potluck\nPrayer meeting';
+  p.notes = 'Private\nthing';
+  return tidyProgram(p);
+};
+
+test('a zip is valid: every entry has the right checksum and the same bytes always come out', () => {
+  const a = zip([{ name: 'a.txt', data: 'héllo' }, { name: 'dir/b.bin', data: new Uint8Array([0, 1, 2, 255]) }]);
+  const files = readZip(a);
+  assert.equal(files['a.txt'], 'héllo');
+  assert.deepEqual(Object.keys(files), ['a.txt', 'dir/b.bin']);
+  assert.deepEqual(a, zip([{ name: 'a.txt', data: 'héllo' }, { name: 'dir/b.bin', data: new Uint8Array([0, 1, 2, 255]) }]));
+  assert.equal(crc32(new TextEncoder().encode('123456789')), 0xcbf43926, 'the standard CRC-32 check value');
+});
+
+test('Markdown is a note an Obsidian vault can use, and typed text cannot become markup', () => {
+  const md = markdownText(awkward(), { copy: 'platform' });
+  assert.match(md, /^---\ntitle: "Peace & <Hope> \\"now\\""\nchurch: "Riverside \[\[Church\]\]"\ndate: 2026-/);
+  assert.match(md, /\ntype: program\ntags: \[open-scroll\]\ncopy: platform\n---\n/);
+  assert.match(md, /\n# Peace & \\<Hope\\> "now"\n/);
+  assert.match(md, /Riverside \\\[\\\[Church\\\]\\\]/, 'no accidental wiki links');
+  assert.match(md, /\*\*Hymn\*\* — =1\+1 \\\| \\#5 \\\*bold\\\*/);
+  assert.match(md, /> \[!note\] Planning notes\n> Private\n> thing/);
+  const congregation = markdownText(awkward(), { copy: 'congregation', showLeaders: false });
+  assert.doesNotMatch(congregation, /Mic 2|Private|Ana|`5:30 PM`/);
+  assert.match(congregation, /copy: congregation/);
+  assert.equal(mdEscape('a_b*c[d]'), 'a\\_b\\*c\\[d\\]');
+});
+
+test('a series in Markdown has a date range, a checklist and the team on the platform copy only', () => {
+  const s = tidyProgram(newSeries(ADVENTIST, { start: '2026-11-15', count: 3, weekdays: [0, 2] }, NOW));
+  s.team[0].who = 'Pastor Reyes';
+  const platform = markdownText(s, { copy: 'platform' });
+  assert.match(platform, /type: series\n/);
+  assert.match(platform, /end: 2026-11-/);
+  assert.match(platform, /## Team\n\n- \*\*Speaker\*\*: Pastor Reyes/);
+  assert.match(platform, /- \[ \] Book the venue/);
+  const congregation = markdownText(s, { copy: 'congregation' });
+  assert.doesNotMatch(congregation, /## Team|Pastor Reyes|Book the venue/);
+});
+
+test('a Word file is a valid package, escapes everything, and follows the copy rules', () => {
+  const files = readZip(docxFile(awkward(), { copy: 'platform' }, 'a4'));
+  assert.deepEqual(Object.keys(files).sort(), ['[Content_Types].xml', '_rels/.rels', 'docProps/core.xml', 'word/_rels/document.xml.rels', 'word/document.xml', 'word/footer1.xml', 'word/styles.xml']);
+  const body = files['word/document.xml'];
+  assert.match(body, /Peace &amp; &lt;Hope&gt; &quot;now&quot;/);
+  assert.doesNotMatch(body, /<Hope>/);
+  assert.match(body, /w:pgSz w:w="11906" w:h="16838"/, 'A4');
+  assert.match(body, /Mic 2/);
+  assert.match(readZip(docxFile(awkward(), { copy: 'platform' }))['word/document.xml'], /w:pgSz w:w="12240" w:h="15840"/, 'Letter by default');
+  const congregation = readZip(docxFile(awkward(), { copy: 'congregation', showLeaders: false }))['word/document.xml'];
+  assert.doesNotMatch(congregation, /Mic 2|Private|>Ana</);
+});
+
+test('characters XML cannot hold are dropped, and emoji survive', () => {
+  assert.equal(xml('a\u0000b\u000Bc\uD800d'), 'abcd');
+  assert.equal(xml('🙏 <&>'), '🙏 &lt;&amp;&gt;');
+});
+
+test('an Excel file has one row per part, literal text, safe sheet names, and counts only when asked', () => {
+  const s = tidyProgram(newSeries(ADVENTIST, { start: '2026-11-15', count: 2, weekdays: [0, 1], topics: ['=SUM(A1)', 'Peace'] }, NOW));
+  s.nights[0].counts = { attendance: 80, guests: 10, interests: 5, decisions: 1 };
+  const withCounts = readZip(xlsxFile(s, { copy: 'platform' }, true));
+  const nights = withCounts['xl/worksheets/sheet1.xml'];
+  assert.match(nights, /<t xml:space="preserve">=SUM\(A1\)<\/t>/, 'stored as text, never as a formula');
+  assert.doesNotMatch(nights, /<f>/);
+  assert.match(nights, /<c r="G2"><v>80<\/v><\/c>/);
+  assert.match(withCounts['xl/workbook.xml'], /name="Nights"[\s\S]*name="Program"[\s\S]*name="Team"[\s\S]*name="Preparation"[\s\S]*name="Details"/);
+  const without = readZip(xlsxFile(s, { copy: 'platform' }, false))['xl/worksheets/sheet1.xml'];
+  assert.doesNotMatch(without, /Decisions|<v>80<\/v>/);
+  const congregation = readZip(xlsxFile(s, { copy: 'congregation' }));
+  assert.doesNotMatch(congregation['xl/workbook.xml'], /Team|Preparation|Program/, 'a schedule has no private sheets');
+  assert.doesNotMatch(congregation['xl/worksheets/sheet1.xml'], /Decisions/);
+  const service = workbookSheets(awkward(), { copy: 'platform' });
+  assert.deepEqual(service[0].rows[0], ['Section', 'Start', 'Part', 'Hymn, passage or title', 'Who leads', 'Minutes', 'Private note']);
+  assert.equal(workbookSheets(awkward(), { copy: 'congregation', showLeaders: false })[0].rows[0].includes('Who leads'), false);
+});
+
+test('sheet names and column letters follow Excel rules', () => {
+  assert.deepEqual(sheetNames(['A/B:C', 'a/b:c', 'x'.repeat(40), '']), ['A B C', 'a b c 2', 'x'.repeat(31), 'Sheet']);
+  assert.deepEqual([0, 25, 26, 51, 52, 701, 702].map(columnName), ['A', 'Z', 'AA', 'AZ', 'BA', 'ZZ', 'AAA']);
+});
+
+test('a PDF is made with real text, any paper, and says when characters could not be shown', async () => {
+  const plain = await programPdf(awkward(), { copy: 'platform' }, 'a4');
+  assert.equal(new TextDecoder().decode(plain.bytes.subarray(0, 5)), '%PDF-');
+  assert.equal(plain.replaced, 0);
+  const p = awkward();
+  p.sections[0].lines[0].detail = 'Verse 🙏 日本語 José';
+  p.sections[0].lines[1].detail = 'x'.repeat(400);
+  const other = await programPdf(p, { copy: 'congregation' }, 'letter');
+  assert.ok(other.replaced >= 2, 'emoji and Japanese are counted');
+  assert.ok(other.bytes.length > 1000);
+});
+
+test('paper size is Letter or A4 and nothing else', () => {
+  assert.equal(tidySettings({}).paper, 'letter');
+  assert.equal(tidySettings({ paper: 'a4' }).paper, 'a4');
+  assert.equal(tidySettings({ paper: 'legal; drop table' }).paper, 'letter');
 });

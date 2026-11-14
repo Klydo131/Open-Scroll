@@ -13,46 +13,86 @@ export function copyOptions(copy, showLeaders) {
     : { leaders: showLeaders, times: false, notes: false };
 }
 
-function lineText(line, opt) {
-  return [
-    opt.times && line.start ? line.start : '',
-    line.part || 'Untitled',
-    line.detail,
-    opt.leaders ? line.who : '',
-    opt.notes && line.note ? `(${line.note})` : '',
-  ].filter(Boolean).join(' · ');
+/**
+ * Everything a printed or saved copy contains, in the order it appears, with
+ * the congregation/platform rules already applied. Text, Markdown, Word,
+ * Excel and PDF all read this one shape, so they can never disagree about
+ * what a copy is allowed to show.
+ */
+export function programDoc(program, { copy = 'congregation', showLeaders = true, nightId = null, night = 'Night' } = {}) {
+  const opt = copyOptions(copy, showLeaders);
+  const series = program.kind === 'series';
+  const asLines = (lines, time) => timed(lines, time).filter(l => l.part || l.detail).map(l => ({
+    time: opt.times ? l.start : '',
+    part: l.part || 'Untitled',
+    detail: l.detail,
+    who: opt.leaders ? l.who : '',
+    note: opt.notes ? l.note : '',
+    minutes: l.minutes || 0,
+  }));
+  const doc = {
+    kind: program.kind,
+    title: program.title,
+    church: program.church,
+    date: program.date,
+    venue: program.venue,
+    head: [program.church, program.date && !series ? dateLabel(program.date) : '', program.venue].filter(Boolean),
+    theme: program.theme,
+    details: program.details.filter(d => d.label && d.value).map(d => ({ label: d.label, value: d.value })),
+    sections: [],
+    team: [],
+    checklist: [],
+    announcements: program.announcements.split('\n').map(a => a.trim()).filter(Boolean),
+    notes: opt.notes ? program.notes.trim() : '',
+    look: program.look,
+    opt,
+  };
+  if (!series) {
+    doc.sections = program.sections.map(s => ({
+      title: s.title, topic: '', aside: clockAt(s.time), facts: [], lines: asLines(s.lines, s.time),
+    }));
+    return doc;
+  }
+  const full = Boolean(nightId) || copy === 'platform';
+  const nights = nightId ? program.nights.filter(n => n.id === nightId) : program.nights;
+  doc.sections = nights.map(n => ({
+    id: n.id,
+    title: `${night} ${program.nights.indexOf(n) + 1}`,
+    topic: n.topic,
+    aside: '',
+    facts: [
+      [dateLabel(n.date), clockAt(n.time)].filter(Boolean).join(' · '),
+      n.speaker ? `Speaker: ${n.speaker}` : '',
+      n.scripture ? `Scripture: ${n.scripture}` : '',
+    ].filter(Boolean),
+    night: { date: n.date, time: n.time, topic: n.topic, speaker: n.speaker, scripture: n.scripture },
+    lines: full ? asLines(n.lines, n.time) : [],
+  }));
+  // The people serving and the preparation list are for those leading, so only the platform copy has them.
+  if (opt.notes) {
+    doc.team = program.team.filter(t => t.role || t.who).map(t => ({ role: t.role, who: t.who }));
+    doc.checklist = program.checklist.filter(c => c.text).map(c => ({ text: c.text, done: c.done }));
+  }
+  return doc;
 }
 
-export function programText(program, { copy = 'congregation', showLeaders = true, nightId = null } = {}) {
-  const opt = copyOptions(copy, showLeaders);
-  const out = [program.title];
-  const head = [program.church, program.date && program.kind === 'service' ? dateLabel(program.date) : '', program.venue].filter(Boolean);
-  if (head.length) out.push(head.join(' · '));
-  if (program.theme) out.push(program.theme);
-  for (const d of program.details.filter(d => d.label && d.value)) out.push(`${d.label}: ${d.value}`);
+function lineText(line) {
+  return [line.time, line.part, line.detail, line.who, line.note ? `(${line.note})` : ''].filter(Boolean).join(' · ');
+}
 
-  if (program.kind === 'service') {
-    for (const s of program.sections) {
-      out.push('', [s.title.toUpperCase(), clockAt(s.time)].filter(Boolean).join(' · '));
-      for (const line of timed(s.lines, s.time).filter(l => l.part || l.detail)) out.push(lineText(line, opt));
-    }
-  } else {
-    const nights = nightId ? program.nights.filter(n => n.id === nightId) : program.nights;
-    for (const n of nights) {
-      const number = program.nights.indexOf(n) + 1;
-      out.push('', `NIGHT ${number}${n.topic ? `: ${n.topic}` : ''}`);
-      const when = [dateLabel(n.date), clockAt(n.time)].filter(Boolean).join(' · ');
-      if (when) out.push(when);
-      if (n.speaker) out.push(`Speaker: ${n.speaker}`);
-      if (n.scripture) out.push(`Scripture: ${n.scripture}`);
-      // The whole series is a schedule of nights; one night is its full order.
-      if (nightId || copy === 'platform') {
-        for (const line of timed(n.lines, n.time).filter(l => l.part || l.detail)) out.push(lineText(line, opt));
-      }
-    }
+export function programText(program, options = {}) {
+  const doc = programDoc(program, options);
+  const out = [doc.title];
+  if (doc.head.length) out.push(doc.head.join(' · '));
+  if (doc.theme) out.push(doc.theme);
+  for (const d of doc.details) out.push(`${d.label}: ${d.value}`);
+  for (const s of doc.sections) {
+    out.push('', [s.title.toUpperCase() + (s.topic ? `: ${s.topic}` : ''), s.aside].filter(Boolean).join(' · '), ...s.facts, ...s.lines.map(lineText));
   }
-  if (program.announcements.trim()) out.push('', 'ANNOUNCEMENTS', ...program.announcements.trim().split('\n').map(a => `• ${a.trim()}`).filter(a => a !== '•'));
-  if (opt.notes && program.notes.trim()) out.push('', 'PLANNING NOTES', program.notes.trim());
+  if (doc.team.length) out.push('', 'TEAM', ...doc.team.map(t => [t.role, t.who].filter(Boolean).join(': ')));
+  if (doc.checklist.length) out.push('', 'BEFORE THE FIRST NIGHT', ...doc.checklist.map(c => `[${c.done ? 'x' : ' '}] ${c.text}`));
+  if (doc.announcements.length) out.push('', 'ANNOUNCEMENTS', ...doc.announcements.map(a => `• ${a}`));
+  if (doc.notes) out.push('', 'PLANNING NOTES', doc.notes);
   return out.join('\n') + '\n';
 }
 

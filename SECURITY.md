@@ -8,7 +8,7 @@ The protections that matter most are:
 
 - **No data leaves the device.** The Content Security Policy forbids network connections (`connect-src 'none'`), outside scripts, frames, plug-ins and form submissions.
 - **Saved data cannot run code.** Everything read from storage or from a backup file passes through the tidying functions in `src/model.mjs`, which accept only known fields, strip hidden control and direction-changing characters, and limit every length and number. React escapes all text it shows.
-- **Calendar and picture output** escape text for their formats and are made on the device.
+- **Every saved file is made on the device and escapes text for its format:** calendar, Word and Excel (XML), Markdown (formatting, links and tables), and PDF (unsupported characters are replaced). Text in an Excel cell is always stored as a literal string, never a formula.
 
 ## Supported versions
 

@@ -554,6 +554,7 @@ export function tidySettings(raw) {
     mode: s.mode === 'advanced' ? 'advanced' : 'simple',
     church: text(s.church),
     venue: text(s.venue),
+    paper: s.paper === 'a4' ? 'a4' : 'letter',
     words: Object.fromEntries(OWN_WORDS.map(k => [k, text(s.words?.[k], 40)])),
     look: tidyLook,
     lastSections: list(s.lastSections, LIMITS.sections, k => (typeof k === 'string' && /^[a-z0-9-]{1,40}$/i.test(k) ? k : null)),
