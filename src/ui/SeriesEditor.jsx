@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LIMITS, TEAM_ROLES, addDays, dateLabel, clockAt, newNight, needsSomeone } from '../model.mjs';
+import { LIMITS, NIGHT_COUNTS, TEAM_ROLES, addDays, dateLabel, clockAt, newNight, needsSomeone, seriesTotals } from '../model.mjs';
 import { Field, Icon, IconButton, Readiness } from './bits.jsx';
 import { LineList } from './LineList.jsx';
 import { Extras } from './ServiceEditor.jsx';
@@ -8,11 +8,25 @@ const TABS = [
   { key: 'nights', label: 'Nights', icon: 'calendar' },
   { key: 'team', label: 'Team', icon: 'people' },
   { key: 'prep', label: 'Preparation', icon: 'check' },
-  { key: 'more', label: 'Notes', icon: 'list' },
+  { key: 'more', label: 'Notes', simpleLabel: 'Announcements', icon: 'list' },
 ];
 
+/** How the series is going, from the numbers kept each night. Numbers only: names belong in the church's own records. */
+function Totals({ program }) {
+  const t = seriesTotals(program);
+  if (!t.nightsCounted) return null;
+  return (
+    <section className="card totals rise" aria-label="How the series is going">
+      {[['Average present', t.average], ['Guests', t.guests], ['Interest cards', t.interests], ['Decisions', t.decisions]].map(([label, value]) => (
+        <div key={label}><strong>{value}</strong><span>{label}</span></div>
+      ))}
+      <p className="muted small">From {t.nightsCounted} of {program.nights.length} nights.</p>
+    </section>
+  );
+}
+
 /** A series of meetings: the nights, the people serving and the work before night one. */
-export function SeriesEditor({ program, words, onChange }) {
+export function SeriesEditor({ program, words, advanced, onChange, onSaveTopics }) {
   const [tab, setTab] = useState('nights');
   const [openNight, setOpenNight] = useState(null);
   const set = fields => onChange({ ...program, ...fields });
@@ -41,7 +55,7 @@ export function SeriesEditor({ program, words, onChange }) {
       <div className="tabs" role="tablist" aria-label="Series sections">
         {TABS.map(t => (
           <button key={t.key} type="button" role="tab" aria-selected={tab === t.key} className={tab === t.key ? 'on' : ''} onClick={() => setTab(t.key)}>
-            <Icon name={t.icon} size={16} /> {t.label}
+            <Icon name={t.icon} size={16} /> {!advanced && t.simpleLabel ? t.simpleLabel : t.label}
             {t.key === 'nights' && <span className="count">{program.nights.length}</span>}
             {t.key === 'prep' && <span className="count">{done}/{program.checklist.length}</span>}
           </button>
@@ -50,6 +64,7 @@ export function SeriesEditor({ program, words, onChange }) {
 
       {tab === 'nights' && (
         <div className="night-list" key="nights">
+          {advanced && <Totals program={program} />}
           {program.nights.map((n, i) => {
             const open = openNight === n.id;
             const r = needsSomeone({ kind: 'series', nights: [n] });
@@ -73,7 +88,19 @@ export function SeriesEditor({ program, words, onChange }) {
                       <Field label="Starts" type="time" value={n.time} onChange={v => setNight(n.id, { time: v })} />
                       <Field label="Key scripture" value={n.scripture} onChange={v => setNight(n.id, { scripture: v })} placeholder="e.g. John 14:1-3" className="span" />
                     </div>
-                    <LineList lines={n.lines} time={n.time} onChange={lines => setNight(n.id, { lines })} label={`${words.night} ${i + 1} order`} />
+                    {advanced && (
+                      <fieldset className="counts">
+                        <legend>After the meeting <small>(numbers only)</small></legend>
+                        {NIGHT_COUNTS.map(c => (
+                          <label key={c.key}>
+                            <span>{c.label}</span>
+                            <input type="number" inputMode="numeric" min="0" max="100000" value={n.counts?.[c.key] ?? 0}
+                              onChange={e => setNight(n.id, { counts: { ...n.counts, [c.key]: Math.max(0, Math.min(100000, Math.trunc(Number(e.target.value) || 0))) } })} />
+                          </label>
+                        ))}
+                      </fieldset>
+                    )}
+                    <LineList lines={n.lines} time={n.time} advanced={advanced} onChange={lines => setNight(n.id, { lines })} label={`${words.night} ${i + 1} order`} />
                     <div className="night-foot">
                       <button type="button" className="text-btn danger" disabled={program.nights.length === 1}
                         onClick={() => { set({ nights: program.nights.filter(x => x.id !== n.id) }); setOpenNight(null); }}>
@@ -88,6 +115,11 @@ export function SeriesEditor({ program, words, onChange }) {
           <button type="button" className="add-section" disabled={program.nights.length >= LIMITS.nights} onClick={addNight}>
             <Icon name="plus" size={18} /> Add a night
           </button>
+          {advanced && (
+            <button type="button" className="text-btn" onClick={() => onSaveTopics(`${program.title} topics`, program.nights.map(n => n.topic.trim()))}>
+              <Icon name="bookmark" size={16} /> Save these topics as my list
+            </button>
+          )}
         </div>
       )}
 
@@ -137,7 +169,7 @@ export function SeriesEditor({ program, words, onChange }) {
         </section>
       )}
 
-      {tab === 'more' && <Extras program={program} set={set} />}
+      {tab === 'more' && <Extras program={program} set={set} advanced={advanced} />}
     </div>
   );
 }

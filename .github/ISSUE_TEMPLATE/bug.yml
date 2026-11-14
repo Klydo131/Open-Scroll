@@ -1,0 +1,26 @@
+name: Something is not working
+description: Tell us what went wrong while planning or sharing a program.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting. Please leave out names of real church members.
+        Security problems go through the Security tab, not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options: [Simple, Advanced, Not sure]
+  - type: input
+    id: browser
+    attributes:
+      label: Device and browser
+      placeholder: e.g. iPhone, Safari / Windows laptop, Chrome

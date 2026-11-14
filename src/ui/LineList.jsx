@@ -12,7 +12,7 @@ const SUGGESTIONS = [
  * passage, title) and who leads it. Minutes and a private note open under
  * the line, so the common case stays one short row.
  */
-export function LineList({ lines, time, onChange, label = 'Order of service' }) {
+export function LineList({ lines, time, onChange, label = 'Order of service', advanced = false }) {
   const [open, setOpen] = useState(null);
   const [fresh, setFresh] = useState(null);
   const rows = timed(lines, time);
@@ -31,14 +31,14 @@ export function LineList({ lines, time, onChange, label = 'Order of service' }) 
     <div className="lines">
       <div className="lines-head">
         <h3>{label}</h3>
-        {total > 0 && <span className="pill quiet">{total} min{time ? ` · ends ${clockAt(time, total)}` : ''}</span>}
+        {advanced && total > 0 && <span className="pill quiet">{total} min{time ? ` · ends ${clockAt(time, total)}` : ''}</span>}
       </div>
       {lines.length === 0 && <p className="empty-note">No parts yet. Add the first one below.</p>}
       <ol className="line-list">
         {rows.map((line, index) => (
           <li key={line.id} className={`line${open === line.id ? ' open' : ''}${fresh === line.id ? ' fresh' : ''}`}
             style={{ '--i': Math.min(index, 12) }}>
-            <span className="line-time" aria-hidden={!line.start}>{line.start || `${index + 1}`}</span>
+            <span className="line-time" aria-hidden="true">{advanced && line.start ? line.start : `${index + 1}`}</span>
             <div className="line-main">
               <input className="line-part" aria-label={`Part ${index + 1}`} placeholder="What happens"
                 value={line.part} maxLength={LIMITS.text} autoFocus={fresh === line.id}
@@ -54,17 +54,17 @@ export function LineList({ lines, time, onChange, label = 'Order of service' }) 
               <Icon name="more" size={18} />
             </button>
             {open === line.id && (
-              <div className="line-extra">
-                <label className="minutes">
+              <div className={`line-extra${advanced ? "" : " only-tools"}`}>
+                {advanced && <label className="minutes">
                   <span>Minutes</span>
                   <input type="number" inputMode="numeric" min="0" max={LIMITS.minutes} value={line.minutes}
                     onChange={e => set(line.id, { minutes: Math.max(0, Math.min(LIMITS.minutes, Math.trunc(Number(e.target.value) || 0))) })} />
-                </label>
-                <label className="note">
+                </label>}
+                {advanced && <label className="note">
                   <span>Private note <small>(platform copy only)</small></span>
                   <input value={line.note} maxLength={300} placeholder="e.g. Mic 2, stand at the pulpit"
                     onChange={e => set(line.id, { note: e.target.value })} />
-                </label>
+                </label>}
                 <div className="line-tools">
                   <IconButton icon="up" label="Move up" disabled={index === 0} onClick={() => onChange(moveItem(lines, index, -1))} />
                   <IconButton icon="down" label="Move down" disabled={index === lines.length - 1} onClick={() => onChange(moveItem(lines, index, 1))} />

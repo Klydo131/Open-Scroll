@@ -1,3 +1,6 @@
 minimumReleaseAgeExclude:
   - '@astryxdesign/core@0.7.15'
   - '@astryxdesign/theme-neutral@0.7.15'
+allowBuilds:
+  # Its only install script prints a setup hint; the published files are complete without it.
+  '@astryxdesign/core': false

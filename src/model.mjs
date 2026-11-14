@@ -16,6 +16,8 @@ export const LIMITS = {
   text: 160,
   long: 3000,
   minutes: 300,
+  templates: 40,
+  topicSets: 20,
 };
 
 const makeId = () => globalThis.crypto.randomUUID();
@@ -49,9 +51,30 @@ export const TRADITIONS = {
   },
 };
 
+/** The names a church can change for itself in Settings (Advanced). */
+export const OWN_WORDS = ['program', 'school', 'worship', 'series', 'night'];
+
+/** The tradition's words, with any the church renamed for itself. */
 export function words(settings) {
-  return TRADITIONS[settings?.tradition] ?? TRADITIONS.adventist;
+  const base = TRADITIONS[settings?.tradition] ?? TRADITIONS.adventist;
+  const own = settings?.words ?? {};
+  const out = { ...base };
+  for (const key of OWN_WORDS) if (typeof own[key] === 'string' && own[key].trim()) out[key] = own[key].trim();
+  return out;
 }
+
+export const MODES = {
+  simple: {
+    label: 'Simple',
+    summary: 'The essentials: each part, its hymn or passage, and who leads it.',
+  },
+  advanced: {
+    label: 'Advanced',
+    summary: 'Adds minutes and start times, private notes, the platform copy, extra details, nightly counts, and your own templates, topics and words.',
+  },
+};
+
+export const isAdvanced = settings => settings?.mode === 'advanced';
 
 /** "Evangelistic series" → "evangelistic series", but "Sabbath" and "Sunday" keep their capital. */
 export function lower(phrase) {
@@ -101,6 +124,27 @@ export const SECTION_TEMPLATES = {
       ],
     },
     {
+      key: 'thirteenth', title: 'Thirteenth Sabbath program', time: '09:00',
+      blurb: 'The last Sabbath of the quarter: a mission feature and the special mission offering.',
+      parts: [
+        P('Song service', 10), P('Opening hymn', 4, 'Hymn number'), P('Opening prayer', 2), P('Welcome', 3),
+        P('Mission feature', 15, 'Field of this quarter\'s offering'), P("Children's mission song", 4),
+        P('Thirteenth Sabbath offering', 5), P('Lesson review', 25, 'Quarter\'s theme'),
+        P('Closing hymn', 4, 'Hymn number'), P('Closing prayer', 2),
+      ],
+    },
+    {
+      key: 'communion', title: 'Communion service', time: '11:00',
+      blurb: 'The ordinance of humility, then the Lord\'s Supper. Usually once a quarter.',
+      parts: [
+        P('Call to worship', 2), P('Opening hymn', 4, 'Hymn number'), P('Invocation', 2),
+        P('Scripture reading', 3, 'e.g. John 13:1-17'), P('Communion message', 15, 'Title'),
+        P('Ordinance of humility (foot washing)', 15), P('Hymn on returning', 4, 'Hymn number'),
+        P('The bread', 5, '1 Corinthians 11:23-24'), P('The cup', 5, '1 Corinthians 11:25-26'),
+        P('Offering for the poor', 4), P('Closing hymn', 4, 'Hymn number'), P('Benediction', 1),
+      ],
+    },
+    {
       key: 'afternoon', title: 'Afternoon program (AY)', time: '15:00',
       blurb: 'Adventist Youth: songs, a topic and testimony.',
       parts: [
@@ -131,6 +175,16 @@ export const SECTION_TEMPLATES = {
         P('Opening prayer', 2), P('Scripture reading', 3, 'Passage'), P('Prayers of the people', 5),
         P('Offering', 5), P("Children's message", 5), P('Special music', 4), P('Sermon', 30, 'Sermon title'),
         P('Response hymn', 4, 'Hymn or song'), P('Benediction', 1),
+      ],
+    },
+    {
+      key: 'communion', title: 'Communion service', time: '10:30',
+      blurb: 'Words of institution, the bread and the cup.',
+      parts: [
+        P('Call to worship', 2), P('Opening hymn', 4, 'Hymn or song'), P('Prayer of confession', 3),
+        P('Scripture reading', 3, 'Passage'), P('Communion message', 15, 'Title'),
+        P('Words of institution', 3, '1 Corinthians 11:23-26'), P('The bread', 5), P('The cup', 5),
+        P('Prayer of thanksgiving', 2), P('Closing hymn', 4, 'Hymn or song'), P('Benediction', 1),
       ],
     },
     {
@@ -241,16 +295,69 @@ export function addDays(key, days) {
 
 const LOOK = { style: 'classic', accent: '#1f3a5f' };
 
-export function newService(settings, sectionKeys, now = new Date()) {
+/**
+ * Every part of the day a church can start from: the built-in orders first
+ * (under the church's own names for its school and worship), then the
+ * templates it saved itself. A saved template's key is its id.
+ */
+export function allTemplates(settings, own = []) {
+  const base = TRADITIONS[settings?.tradition] ?? TRADITIONS.adventist;
   const w = words(settings);
-  const templates = SECTION_TEMPLATES[settings?.tradition] ?? SECTION_TEMPLATES.adventist;
+  const builtIn = (SECTION_TEMPLATES[settings?.tradition] ?? SECTION_TEMPLATES.adventist).map(t => ({
+    ...t, own: false,
+    title: t.title === base.school ? w.school : t.title === base.worship ? w.worship : t.title,
+  }));
+  return [...builtIn, ...own.map(t => ({ ...t, key: t.id, own: true, blurb: `${t.parts.length} parts` }))];
+}
+
+export function newService(settings, sectionKeys, now = new Date(), own = []) {
+  const w = words(settings);
+  const templates = allTemplates(settings, own);
   const chosen = sectionKeys.map(key => templates.find(t => t.key === key)).filter(Boolean);
   return {
     id: makeId(), kind: 'service', title: w.program, church: settings?.church ?? '',
-    date: nextWeekday(w.weekday, now), theme: '', venue: '',
+    date: nextWeekday(w.weekday, now), theme: '', venue: settings?.venue ?? '',
     sections: (chosen.length ? chosen : [templates[0]]).map(sectionFromTemplate),
-    details: [], announcements: '', notes: '', look: { ...LOOK }, updated: now.getTime(),
+    details: [], announcements: '', notes: '', look: { ...LOOK, ...settings?.look }, updated: now.getTime(),
   };
+}
+
+/**
+ * Several weeks at once, as a superintendent plans a quarter. With
+ * `thirteenth`, the last week becomes the Thirteenth Sabbath program in place
+ * of the first chosen part of the day.
+ */
+export function planWeeks(settings, sectionKeys, { start, weeks = 13, thirteenth = false }, now = new Date(), own = []) {
+  const first = start || nextWeekday(words(settings).weekday, now);
+  const count = Math.max(1, Math.min(weeks, 26));
+  return Array.from({ length: count }, (_, i) => {
+    const last = i === count - 1;
+    const keys = last && thirteenth ? ['thirteenth', ...sectionKeys.slice(1)] : sectionKeys;
+    const p = newService(settings, keys, now, own);
+    return { ...p, date: addDays(first, i * 7), title: last && thirteenth ? 'Thirteenth Sabbath' : p.title };
+  });
+}
+
+/** A part of the day saved as the church's own template: its order, never its people. */
+export function templateFromSection(section) {
+  return {
+    id: makeId(), title: section.title, time: section.time,
+    parts: section.lines.filter(l => l.part.trim()).map(l => ({ part: l.part, minutes: l.minutes, hint: l.hint })),
+  };
+}
+
+/** Counts a series keeps for each night: numbers only, never names. */
+export const NIGHT_COUNTS = [
+  { key: 'attendance', label: 'Present' },
+  { key: 'guests', label: 'Guests' },
+  { key: 'interests', label: 'Interest cards' },
+  { key: 'decisions', label: 'Decisions' },
+];
+
+export function seriesTotals(program) {
+  const counted = program.nights.filter(n => n.counts && Object.values(n.counts).some(v => v > 0));
+  const totals = Object.fromEntries(NIGHT_COUNTS.map(c => [c.key, program.nights.reduce((t, n) => t + (n.counts?.[c.key] ?? 0), 0)]));
+  return { ...totals, nightsCounted: counted.length, average: counted.length ? Math.round(totals.attendance / counted.length) : 0 };
 }
 
 /**
@@ -272,15 +379,19 @@ export function newSeries(settings, { title = '', start, count = 7, weekdays = [
   }
   return {
     id: makeId(), kind: 'series', title: title || w.series, church: settings?.church ?? '',
-    date: first, theme: '', venue: '', nights,
+    date: first, theme: '', venue: settings?.venue ?? '', nights,
     team: TEAM_ROLES.slice(0, 8).map(role => ({ id: makeId(), role, who: '' })),
     checklist: PREP_CHECKLIST.map(text => ({ id: makeId(), text, done: false })),
-    details: [], announcements: '', notes: '', look: { ...LOOK, accent: '#5b2a3c' }, updated: now.getTime(),
+    details: [], announcements: '', notes: '', look: { ...LOOK, accent: '#5b2a3c', ...settings?.look }, updated: now.getTime(),
   };
 }
 
 export function newNight(date = '', time = '19:00', topic = '') {
-  return { id: makeId(), date, time, topic, speaker: '', scripture: '', lines: linesFrom(NIGHT_TEMPLATE) };
+  return { id: makeId(), date, time, topic, speaker: '', scripture: '', lines: linesFrom(NIGHT_TEMPLATE), counts: emptyCounts() };
+}
+
+export function emptyCounts() {
+  return Object.fromEntries(NIGHT_COUNTS.map(c => [c.key, 0]));
 }
 
 /** The same program, a week later: same parts, same people cleared, new date. */
@@ -382,6 +493,8 @@ const clock = v => (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v)
 const mins = v => (Number.isFinite(v) ? Math.max(0, Math.min(LIMITS.minutes, Math.trunc(v))) : 0);
 const list = (v, max, each) => (Array.isArray(v) ? v.slice(0, max).map(each).filter(Boolean) : []);
 const colour = v => (typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v) ? v : LOOK.accent);
+const count = v => (Number.isFinite(v) ? Math.max(0, Math.min(100000, Math.trunc(v))) : 0);
+const STYLES = ['classic', 'clean', 'warm'];
 
 function tidyLine(l) {
   if (!l || typeof l !== 'object') return null;
@@ -404,7 +517,11 @@ export function tidyProgram(p) {
     return sections.length ? { ...base, sections } : null;
   }
   const nights = list(p.nights, LIMITS.nights, n => (n && typeof n === 'object'
-    ? { id: id(n.id), date: day(n.date), time: clock(n.time), topic: text(n.topic), speaker: text(n.speaker), scripture: text(n.scripture), lines: list(n.lines, LIMITS.lines, tidyLine) } : null));
+    ? {
+      id: id(n.id), date: day(n.date), time: clock(n.time), topic: text(n.topic), speaker: text(n.speaker), scripture: text(n.scripture),
+      lines: list(n.lines, LIMITS.lines, tidyLine),
+      counts: Object.fromEntries(NIGHT_COUNTS.map(c => [c.key, count(n.counts?.[c.key])])),
+    } : null));
   if (!nights.length) return null;
   return {
     ...base, nights,
@@ -413,14 +530,45 @@ export function tidyProgram(p) {
   };
 }
 
+export function tidyTemplate(t) {
+  if (!t || typeof t !== 'object') return null;
+  const parts = list(t.parts, LIMITS.lines, p => (p && typeof p === 'object' && text(p.part)
+    ? { part: text(p.part), minutes: mins(p.minutes), hint: text(p.hint, 60) } : null));
+  return parts.length ? { id: id(t.id), title: text(t.title, 80) || 'My template', time: clock(t.time), parts } : null;
+}
+
+export function tidyTopicSet(s) {
+  if (!s || typeof s !== 'object') return null;
+  const topics = list(s.topics, LIMITS.nights, v => text(v) || null);
+  return topics.length ? { id: id(s.id), label: text(s.label, 80) || 'My topics', topics } : null;
+}
+
+export function tidySettings(raw) {
+  const s = raw && typeof raw === 'object' ? raw : {};
+  const look = s.look && typeof s.look === 'object' ? s.look : {};
+  const tidyLook = {};
+  if (STYLES.includes(look.style)) tidyLook.style = look.style;
+  if (/^#[0-9a-f]{6}$/i.test(look.accent ?? '')) tidyLook.accent = look.accent;
+  return {
+    tradition: Object.hasOwn(TRADITIONS, s.tradition) ? s.tradition : 'adventist',
+    mode: s.mode === 'advanced' ? 'advanced' : 'simple',
+    church: text(s.church),
+    venue: text(s.venue),
+    words: Object.fromEntries(OWN_WORDS.map(k => [k, text(s.words?.[k], 40)])),
+    look: tidyLook,
+    lastSections: list(s.lastSections, LIMITS.sections, k => (typeof k === 'string' && /^[a-z0-9-]{1,40}$/i.test(k) ? k : null)),
+    chosen: s.chosen === true,
+  };
+}
+
 export function tidyStore(raw) {
   const store = raw && typeof raw === 'object' ? raw : {};
-  const tradition = Object.hasOwn(TRADITIONS, store.settings?.tradition) ? store.settings.tradition : 'adventist';
-  const seen = new Set();
-  const programs = list(store.programs, LIMITS.programs, tidyProgram).filter(p => !seen.has(p.id) && seen.add(p.id));
+  const unique = items => { const seen = new Set(); return items.filter(x => !seen.has(x.id) && seen.add(x.id)); };
   return {
-    settings: { tradition, church: text(store.settings?.church), chosen: store.settings?.chosen === true },
-    programs,
+    settings: tidySettings(store.settings),
+    programs: unique(list(store.programs, LIMITS.programs, tidyProgram)),
+    templates: unique(list(store.templates, LIMITS.templates, tidyTemplate)),
+    topicSets: unique(list(store.topicSets, LIMITS.topicSets, tidyTopicSet)),
   };
 }
 
@@ -462,4 +610,9 @@ export function readStore(storage) {
 
 export function writeStore(storage, store) {
   storage.setItem(STORAGE_KEY, JSON.stringify(tidyStore(store)));
+}
+
+/** Built-in topic lists for the tradition, then the church's own. */
+export function allTopicSets(settings, own = []) {
+  return [...(TOPIC_SETS[settings?.tradition] ?? TOPIC_SETS.adventist), ...own.map(s => ({ ...s, key: s.id, own: true }))];
 }

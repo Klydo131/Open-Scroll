@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  DEFAULT_SECTIONS, OLD_STORAGE_KEY, STORAGE_KEY, SECTION_TEMPLATES, lower, TOPIC_SETS, addDays, clockAt, copyForNextWeek, dayKey,
+  DEFAULT_SECTIONS, OLD_STORAGE_KEY, STORAGE_KEY, SECTION_TEMPLATES, lower, allTemplates, allTopicSets, planWeeks,
+  seriesTotals, templateFromSection, tidySettings, TOPIC_SETS, addDays, clockAt, copyForNextWeek, dayKey,
   duplicate, fromVersionOne, needsSomeone, newSeries, newService, nextWeekday, readStore, tidyProgram,
   tidyStore, timed, totalMinutes, words, writeStore,
 } from '../src/model.mjs';
@@ -188,4 +189,85 @@ test('names keep their capitals and a new program starts with the two main servi
     const titles = newService({ tradition }, keys, NOW).sections.map(s => s.title);
     assert.deepEqual(titles, [words({ tradition }).school, words({ tradition }).worship]);
   }
+});
+
+test('Simple is the default, and switching modes keeps every saved detail', () => {
+  assert.equal(tidySettings({}).mode, 'simple');
+  assert.equal(tidySettings({ mode: 'advanced' }).mode, 'advanced');
+  assert.equal(tidySettings({ mode: 'expert' }).mode, 'simple', 'unknown modes fall back to Simple');
+  const p = newService(ADVENTIST, ['vespers'], NOW);
+  p.sections[0].lines[0] = { ...p.sections[0].lines[0], minutes: 7, note: 'Piano' };
+  p.notes = 'Private';
+  const store = tidyStore({ settings: { mode: 'advanced' }, programs: [p] });
+  const simple = tidyStore({ ...store, settings: { ...store.settings, mode: 'simple' } });
+  assert.deepEqual(simple.programs, store.programs, 'the mode never touches programs');
+});
+
+test('a church can rename its words, and built-in parts of the day follow', () => {
+  const settings = { tradition: 'adventist', words: { worship: 'Worship Hour', series: '  ', night: 'Evening' } };
+  const w = words(settings);
+  assert.equal(w.worship, 'Worship Hour');
+  assert.equal(w.series, 'Evangelistic series', 'blank keeps the usual word');
+  assert.equal(w.night, 'Evening');
+  assert.equal(w.day, 'Sabbath', 'the day itself is not renameable');
+  const titles = allTemplates(settings).map(t => t.title);
+  assert.ok(titles.includes('Worship Hour') && !titles.includes('Divine Service'));
+  assert.equal(tidySettings({ words: { program: 'x'.repeat(99), bogus: 'y' } }).words.program.length, 40);
+  assert.equal('bogus' in tidySettings({ words: { bogus: 'y' } }).words, false);
+});
+
+test('a saved template keeps the order and minutes but never the people', () => {
+  const p = newService(ADVENTIST, ['vespers'], NOW);
+  p.sections[0].lines[0] = { ...p.sections[0].lines[0], who: 'A. Member', detail: 'No. 7', note: 'secret' };
+  p.sections[0].title = 'Our vespers';
+  const t = templateFromSection(p.sections[0]);
+  assert.equal(t.title, 'Our vespers');
+  assert.deepEqual(Object.keys(t.parts[0]).sort(), ['hint', 'minutes', 'part']);
+  assert.doesNotMatch(JSON.stringify(t), /A\. Member|No\. 7|secret/);
+  const made = newService(ADVENTIST, [t.id], NOW, [t]);
+  assert.equal(made.sections[0].title, 'Our vespers');
+  assert.equal(made.sections[0].lines.length, 4);
+  assert.ok(allTemplates(ADVENTIST, [t]).at(-1).own);
+});
+
+test('planning a quarter makes one program a week and ends on the Thirteenth Sabbath', () => {
+  const list = planWeeks(ADVENTIST, ['sabbath-school', 'divine-service'], { start: '2026-12-26', weeks: 13, thirteenth: true }, NOW);
+  assert.equal(list.length, 13);
+  assert.equal(list[1].date, '2027-01-02');
+  assert.equal(list[12].date, '2027-03-20');
+  assert.equal(new Set(list.map(p => p.id)).size, 13);
+  assert.deepEqual(list[12].sections.map(s => s.title), ['Thirteenth Sabbath program', 'Divine Service']);
+  assert.deepEqual(list[0].sections.map(s => s.title), ['Sabbath School', 'Divine Service']);
+  assert.equal(planWeeks(GENERAL, ['worship'], { start: '2026-11-15', weeks: 99 }, NOW).length, 26, 'capped');
+});
+
+test('nightly counts are numbers only, tidied, and add up', () => {
+  const s = newSeries(ADVENTIST, { start: '2026-11-15', count: 3, weekdays: [0, 1, 2] }, NOW);
+  s.nights[0].counts = { attendance: 80, guests: 12, interests: 9, decisions: 2 };
+  s.nights[1].counts = { attendance: 100, guests: 8, interests: 4, decisions: 1, name: 'Somebody' };
+  const t = tidyProgram(s);
+  assert.deepEqual(Object.keys(t.nights[1].counts).sort(), ['attendance', 'decisions', 'guests', 'interests']);
+  assert.deepEqual(seriesTotals(t), { attendance: 180, guests: 20, interests: 13, decisions: 3, nightsCounted: 2, average: 90 });
+  s.nights[2].counts = { attendance: -5, guests: 1e12, interests: 'many' };
+  assert.deepEqual(tidyProgram(s).nights[2].counts, { attendance: 0, guests: 100000, interests: 0, decisions: 0 });
+  assert.doesNotMatch(programText(t, { copy: 'platform' }), /180|Interest/, 'counts never print on a program');
+});
+
+test('own templates and topic lists are tidied, and junk is dropped', () => {
+  const store = tidyStore({
+    templates: [{ title: 'Ours', parts: [{ part: 'Hymn', minutes: 4 }, { part: '' }, 7] }, { title: 'Empty', parts: [] }, null],
+    topicSets: [{ label: 'Ours', topics: ['Hope', '', 3, 'Peace'] }, { label: 'none', topics: [] }],
+  });
+  assert.equal(store.templates.length, 1);
+  assert.deepEqual(store.templates[0].parts, [{ part: 'Hymn', minutes: 4, hint: '' }]);
+  assert.deepEqual(store.topicSets[0].topics, ['Hope', 'Peace']);
+  assert.equal(allTopicSets(ADVENTIST, store.topicSets).at(-1).label, 'Ours');
+});
+
+test('the researched templates are present for each tradition', () => {
+  const keys = t => SECTION_TEMPLATES[t].map(x => x.key);
+  assert.ok(['thirteenth', 'communion'].every(k => keys('adventist').includes(k)));
+  assert.ok(keys('general').includes('communion'));
+  const communion = SECTION_TEMPLATES.adventist.find(t => t.key === 'communion').parts.map(p => p.part);
+  assert.ok(communion.indexOf('Ordinance of humility (foot washing)') < communion.indexOf('The bread'), 'foot washing comes before the bread');
 });

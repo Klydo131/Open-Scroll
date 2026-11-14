@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
-import { LIMITS, SECTION_TEMPLATES, newLine, sectionFromTemplate } from '../model.mjs';
+import { LIMITS, allTemplates, newLine, sectionFromTemplate } from '../model.mjs';
 import { Field, Icon, IconButton } from './bits.jsx';
 import { LineList } from './LineList.jsx';
 
 /** One program for one day: the details on top, then each part of the day. */
-export function ServiceEditor({ program, settings, words, onChange }) {
+export function ServiceEditor({ program, settings, templates: own = [], words, advanced, onChange, onSaveTemplate }) {
   const [adding, setAdding] = useState(false);
   const set = fields => onChange({ ...program, ...fields });
   const setSection = (id, fields) => set({ sections: program.sections.map(s => (s.id === id ? { ...s, ...fields } : s)) });
-  const templates = SECTION_TEMPLATES[settings.tradition] ?? SECTION_TEMPLATES.adventist;
+  const templates = allTemplates(settings, own);
   const addSection = template => {
     const section = template ? sectionFromTemplate(template) : { id: crypto.randomUUID(), title: 'New part of the day', time: '', lines: [newLine('Opening prayer', 2)] };
     set({ sections: [...program.sections, section] });
@@ -47,12 +47,13 @@ export function ServiceEditor({ program, settings, words, onChange }) {
               <input type="time" value={s.time} onChange={e => setSection(s.id, { time: e.target.value })} />
             </label>
             <div className="section-tools">
+              {advanced && <IconButton icon="bookmark" label={`Save ${s.title} as my template`} onClick={() => onSaveTemplate(s)} />}
               <IconButton icon="up" label="Move this part earlier" disabled={index === 0} onClick={() => moveSection(index, -1)} />
               <IconButton icon="down" label="Move this part later" disabled={index === program.sections.length - 1} onClick={() => moveSection(index, 1)} />
               <IconButton icon="trash" label={`Remove ${s.title}`} tone="danger" disabled={program.sections.length === 1} onClick={() => removeSection(s.id)} />
             </div>
           </div>
-          <LineList lines={s.lines} time={s.time} onChange={lines => setSection(s.id, { lines })} label="Order of service" />
+          <LineList lines={s.lines} time={s.time} advanced={advanced} onChange={lines => setSection(s.id, { lines })} label="Order of service" />
         </section>
       ))}
 
@@ -66,8 +67,8 @@ export function ServiceEditor({ program, settings, words, onChange }) {
             <p className="muted">Start from a familiar order, then change anything.</p>
             <div className="template-grid">
               {templates.map(t => (
-                <button key={t.key} type="button" className="template" onClick={() => addSection(t)}>
-                  <strong>{t.title}</strong><span>{t.blurb}</span>
+                <button key={t.key} type="button" className={`template${t.own ? ' own' : ''}`} onClick={() => addSection(t)}>
+                  <strong>{t.title}</strong><span>{t.own ? `Your template · ${t.blurb}` : t.blurb}</span>
                 </button>
               ))}
               <button type="button" className="template blank" onClick={() => addSection(null)}>
@@ -79,13 +80,13 @@ export function ServiceEditor({ program, settings, words, onChange }) {
         )}
       </section>
 
-      <Extras program={program} set={set} />
+      <Extras program={program} set={set} advanced={advanced} />
     </div>
   );
 }
 
 /** Announcements, labelled extras (offering for, lesson title…) and private notes. */
-export function Extras({ program, set }) {
+export function Extras({ program, set, advanced }) {
   const setDetail = (id, fields) => set({ details: program.details.map(d => (d.id === id ? { ...d, ...fields } : d)) });
   return (
     <section className="card rise extras">
@@ -94,6 +95,7 @@ export function Extras({ program, set }) {
         value={program.announcements} onChange={v => set({ announcements: v })}
         placeholder={'Potluck after the service\nPrayer meeting Wednesday at 7 PM'} />
 
+      {advanced && <>
       <h3>Extra details</h3>
       <p className="muted small">Short facts people look for, such as <em>Offering for</em> or <em>Deacons on duty</em>.</p>
       {program.details.map(d => (
@@ -111,6 +113,7 @@ export function Extras({ program, set }) {
       <h3 className="with-icon"><Icon name="lock" size={16} /> Planning notes</h3>
       <Field label="Only on the platform copy, never on the congregation's" multiline rows={3} maxLength={LIMITS.long}
         value={program.notes} onChange={v => set({ notes: v })} />
+      </>}
     </section>
   );
 }

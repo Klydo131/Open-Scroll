@@ -475,3 +475,50 @@ input:focus-visible + .box { outline: 3px solid var(--focus); outline-offset: 2p
   .doc::before { display: none; }
   .doc-section { break-inside: avoid; }
 }
+
+/* ---------- Settings, modes and ownership ---------- */
+
+.skip { position: fixed; top: 8px; left: 8px; z-index: 60; padding: 10px 14px; border-radius: 10px; background: var(--card); color: var(--navy); font-weight: 600; transform: translateY(-160%); }
+.skip:focus { transform: none; }
+.mode-badge {
+  align-self: center; margin-right: 4px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line-strong);
+  color: var(--muted); font-size: .76rem; font-weight: 700; letter-spacing: .04em;
+}
+.mode-badge.adv { border-color: transparent; background: var(--gold-soft); color: var(--gold); }
+
+.settings { display: grid; gap: 16px; max-width: 760px; }
+.settings-head h1 { font-family: var(--serif); font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 600; }
+.settings-group { display: grid; gap: 10px; }
+.settings-group h2 { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; color: var(--navy); }
+.settings-group.locked { border-style: dashed; box-shadow: none; background: transparent; }
+.settings-group a { color: var(--navy); font-weight: 600; }
+.choice-grid.two { grid-template-columns: 1fr 1fr; }
+.own-list { display: grid; }
+.own-list li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; padding: 4px 0; border-top: 1px solid var(--line); }
+.own-list li:first-child { border-top: 0; }
+.own-list input { min-height: 44px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--card); }
+.topic-set { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.topic-set .detail-row { grid-template-columns: 1fr auto auto; }
+.confirm { display: grid; gap: 12px; padding: 14px 16px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  background: color-mix(in srgb, var(--danger) 7%, transparent); animation: rise .2s var(--ease) both; }
+.card-inset { display: grid; gap: 10px; padding: 14px; border-radius: 12px; background: var(--paper); }
+.template.own { border-color: color-mix(in srgb, var(--gold) 45%, var(--line)); }
+.line-extra.only-tools { display: flex; justify-content: flex-end; padding: 2px 4px 6px; }
+.night-list > .text-btn { justify-self: start; }
+
+.counts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.counts legend { padding: 0 6px; font-size: .84rem; font-weight: 600; color: var(--muted); }
+.counts legend small { font-weight: 400; }
+.counts label { display: grid; gap: 4px; font-size: .8rem; color: var(--muted); }
+.counts input { min-height: 44px; width: 100%; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--card); font-variant-numeric: tabular-nums; }
+.totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+.totals div { display: grid; }
+.totals strong { font-family: var(--serif); font-size: 1.7rem; color: var(--wine); font-variant-numeric: tabular-nums; }
+.totals span { font-size: .8rem; color: var(--muted); }
+.totals p { grid-column: 1 / -1; }
+
+@media (max-width: 760px) {
+  .choice-grid.two { grid-template-columns: 1fr; }
+  .counts, .totals { grid-template-columns: 1fr 1fr; }
+  .mode-badge { display: none; }
+}

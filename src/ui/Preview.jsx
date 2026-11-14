@@ -5,12 +5,15 @@ import { calendar, copyOptions, fileName, programText } from '../output.mjs';
 import { programPicture } from '../picture.js';
 import { Icon } from './bits.jsx';
 
-const STYLES = [
+export const STYLES = [
   { key: 'classic', label: 'Classic' },
   { key: 'clean', label: 'Clean' },
   { key: 'warm', label: 'Warm' },
 ];
-const ACCENTS = ['#1f3a5f', '#5b2a3c', '#2f5d50', '#7a5a1e', '#3f3d56', '#8a3b2e'];
+export const ACCENTS = [
+  { value: '#1f3a5f', name: 'Navy' }, { value: '#5b2a3c', name: 'Wine' }, { value: '#2f5d50', name: 'Cedar' },
+  { value: '#7a5a1e', name: 'Gold' }, { value: '#3f3d56', name: 'Slate' }, { value: '#8a3b2e', name: 'Clay' },
+];
 
 export function saveFile(blob, name) {
   const url = URL.createObjectURL(blob);
@@ -39,8 +42,10 @@ function Lines({ lines, time, opt }) {
 }
 
 /** The program as it will be handed out, and every way to send it. */
-export function Preview({ program, words, onChange, notify }) {
-  const [copy, setCopy] = useState('congregation');
+export function Preview({ program, words, advanced, onChange, notify }) {
+  const [chosenCopy, setCopy] = useState('congregation');
+  // The platform copy belongs to Advanced; Simple always shows the congregation's.
+  const copy = advanced ? chosenCopy : 'congregation';
   const [showLeaders, setShowLeaders] = useState(true);
   const [nightId, setNightId] = useState('');
   const opt = copyOptions(copy, showLeaders);
@@ -75,7 +80,7 @@ export function Preview({ program, words, onChange, notify }) {
   return (
     <div className="preview">
       <aside className="controls card rise">
-        <div className="control">
+        {advanced && <div className="control">
           <span className="control-label">Which copy</span>
           <div className="segmented" role="radiogroup" aria-label="Which copy">
             {[['congregation', 'Congregation'], ['platform', 'Platform']].map(([k, l]) => (
@@ -83,7 +88,7 @@ export function Preview({ program, words, onChange, notify }) {
             ))}
           </div>
           <small className="muted">{copy === 'platform' ? 'For those leading: start times, names and private notes.' : 'What people hold in their hands.'}</small>
-        </div>
+        </div>}
         {copy === 'congregation' && (
           <label className="switch">
             <input type="checkbox" checked={showLeaders} onChange={e => setShowLeaders(e.target.checked)} />
@@ -108,8 +113,8 @@ export function Preview({ program, words, onChange, notify }) {
           </div>
           <div className="swatches" role="radiogroup" aria-label="Colour">
             {ACCENTS.map(c => (
-              <button key={c} type="button" role="radio" aria-checked={look.accent === c} aria-label={`Colour ${c}`}
-                className={look.accent === c ? 'on' : ''} style={{ '--sw': c }} onClick={() => setLook({ accent: c })} />
+              <button key={c.value} type="button" role="radio" aria-checked={look.accent === c.value} aria-label={c.name} title={c.name}
+                className={look.accent === c.value ? 'on' : ''} style={{ '--sw': c.value }} onClick={() => setLook({ accent: c.value })} />
             ))}
           </div>
         </div>
